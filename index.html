@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Assets">
+<title>Asset Tracker</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#070809;--bg2:#0e1012;--bg3:#161a1d;
+  --border:#1e2428;--border2:#2a3238;
+  --c1:#00e5cc;--c1d:rgba(0,229,204,.1);
+  --c2:#ffb800;--c3:#a78bfa;--c4:#ff6b6b;--c5:#51cf66;
+  --c6:#4fc3f7;--c7:#ff9f43;
+  --tx:#e8f0f5;--tx2:#7a9ab0;--tx3:#3d5566;
+  --fn:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
+  --mo:'SF Mono','Courier New',monospace;
+  --r:14px;--rs:10px;
+  --nh:60px;--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fn);overflow:hidden;font-size:16px;-webkit-font-smoothing:antialiased}
+.hidden{display:none!important}
+button{font-family:var(--fn);cursor:pointer;border:none;outline:none}
+input,textarea,select{font-family:var(--fn);outline:none}
+
+/* LAYOUT */
+#app{display:flex;flex-direction:column;height:100%}
+.scr{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nh)+var(--sb)+16px);display:none}
+.scr.active{display:block}
+
+/* NAV */
+.nav{height:var(--nh);display:flex;background:rgba(7,8,9,.95);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;
+  padding-bottom:var(--sb);z-index:100}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;background:none;color:var(--tx3);transition:all .2s;padding:8px 4px}
+.nb.active{color:var(--c1)}
+.nb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nb span{font-size:10px;letter-spacing:.3px}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;padding:calc(var(--st)+12px) 16px 12px;gap:10px;flex-shrink:0}
+.topbar h1{font-size:20px;font-weight:700;flex:1}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:0 16px 12px}
+.card-sm{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:12px}
+
+/* NET WORTH CARD */
+.nw-card{background:linear-gradient(135deg,#0d1f1a,#0a1520);border:1px solid rgba(0,229,204,.15);border-radius:18px;padding:20px;margin:8px 16px 12px}
+.nw-label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.nw-val{font-size:36px;font-weight:700;font-family:var(--mo);color:var(--tx);line-height:1;margin-bottom:4px}
+.nw-sub{font-size:13px;color:var(--tx2)}
+.nw-change{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;margin-top:8px}
+.nw-change.up{background:rgba(81,207,102,.12);color:var(--c5)}
+.nw-change.dn{background:rgba(255,107,107,.12);color:var(--c4)}
+.nw-change.neu{background:rgba(122,154,176,.1);color:var(--tx2)}
+.cur-toggle{display:flex;background:var(--bg3);border-radius:8px;padding:3px;gap:2px}
+.cur-btn{flex:1;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--tx3);background:none;transition:all .2s}
+.cur-btn.active{background:var(--c1);color:#000}
+
+/* FILTER TABS */
+.filter-wrap{padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.filter-wrap::-webkit-scrollbar{display:none}
+.filter-row{display:flex;gap:6px;width:max-content}
+.ftab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;
+  background:var(--bg2);border:1px solid var(--border);color:var(--tx2);white-space:nowrap;transition:all .2s}
+.ftab.active{background:var(--c1);color:#000;border-color:var(--c1)}
+
+/* PIE CHART */
+.pie-wrap{display:flex;gap:16px;align-items:center;margin-bottom:8px}
+.pie-legend{flex:1;min-width:0}
+.leg-item{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.leg-name{font-size:12px;color:var(--tx2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leg-val{font-size:12px;font-weight:600;color:var(--tx);font-family:var(--mo)}
+.leg-pct{font-size:11px;color:var(--tx3);font-family:var(--mo)}
+
+/* ASSET LIST */
+.sec-hdr{padding:4px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.sec-hdr-title{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.asset-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.asset-row:last-child{border-bottom:none}
+.a-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.a-info{flex:1;min-width:0}
+.a-nm{font-size:14px;font-weight:600;color:var(--tx)}
+.a-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.a-rt{text-align:right}
+.a-vl{font-size:14px;font-weight:600;font-family:var(--mo)}
+.a-pc{font-size:11px;color:var(--tx3);font-family:var(--mo)}
+.ptag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-left:5px;vertical-align:middle}
+.pt-live{background:rgba(81,207,102,.15);color:var(--c5)}
+.pt-imp{background:rgba(255,184,0,.15);color:var(--c2)}
+.pt-man{background:rgba(255,107,107,.15);color:var(--c4)}
+.pt-stale{background:rgba(122,154,176,.1);color:var(--tx3)}
+
+/* GROUP HEADER */
+.grp-hdr{padding:10px 16px 6px;display:flex;align-items:center;gap:8px;background:var(--bg)}
+.grp-hdr-title{font-size:12px;font-weight:700;color:var(--tx2)}
+.grp-hdr-val{font-size:12px;font-family:var(--mo);color:var(--tx2);margin-left:auto}
+.grp-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin:0 16px 10px;overflow:hidden}
+
+/* FORM */
+.form-wrap{padding:16px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fl{font-size:12px;color:var(--tx3);font-weight:600;letter-spacing:.3px}
+.fi{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;
+  padding:11px 14px;color:var(--tx);font-size:15px;width:100%;transition:border .2s}
+.fi:focus{border-color:var(--c1)}
+.fi-suggest{position:relative}
+.suggest-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a2228;
+  border:1px solid var(--border2);border-radius:10px;z-index:200;max-height:180px;overflow-y:auto}
+.sug-item{padding:10px 14px;font-size:14px;color:var(--tx);cursor:pointer;border-bottom:1px solid var(--border)}
+.sug-item:last-child{border-bottom:none}
+.sug-item:active{background:var(--bg3)}
+.sug-item.new-item{color:var(--c1);font-weight:600}
+.price-mode-row{display:flex;gap:6px;margin-bottom:14px}
+.pm-btn{flex:1;padding:9px 6px;border-radius:10px;font-size:12px;font-weight:700;
+  border:1px solid var(--border2);background:var(--bg3);color:var(--tx3);transition:all .2s}
+.pm-btn.active.auto{border-color:var(--c5);background:rgba(81,207,102,.1);color:var(--c5)}
+.pm-btn.active.imp{border-color:var(--c2);background:rgba(255,184,0,.1);color:var(--c2)}
+.pm-btn.active.man{border-color:var(--c4);background:rgba(255,107,107,.1);color:var(--c4)}
+.implied-calc{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;
+  padding:10px 14px;font-size:13px;color:var(--tx2);margin-bottom:14px}
+.implied-calc strong{color:var(--c2);font-family:var(--mo)}
+
+/* BUTTONS */
+.btn{padding:13px;border-radius:12px;font-size:15px;font-weight:700;width:100%;transition:all .2s}
+.btn-primary{background:var(--c1);color:#000}
+.btn-primary:active{opacity:.8}
+.btn-ghost{background:var(--bg3);border:1px solid var(--border2);color:var(--tx2)}
+.btn-danger{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);color:var(--c4)}
+.btn-sm{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600}
+.btn-ic{padding:8px;border-radius:10px;background:var(--bg3);border:1px solid var(--border2);color:var(--tx2)}
+.fab{position:fixed;bottom:calc(var(--nh)+var(--sb)+16px);right:16px;width:52px;height:52px;
+  border-radius:16px;background:var(--c1);color:#000;font-size:24px;display:flex;
+  align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,229,204,.3);z-index:90}
+
+/* MODAL / SHEET */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;flex-direction:column;justify-content:flex-end}
+.sheet{background:var(--bg2);border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;padding-bottom:calc(var(--sb)+16px)}
+.sheet-hdr{display:flex;align-items:center;padding:16px 16px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:10}
+.sheet-title{font-size:16px;font-weight:700;flex:1}
+.sh-handle{width:36px;height:3px;background:var(--border2);border-radius:2px;margin:12px auto 0}
+
+/* SNAPSHOT */
+.snap-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.snap-row:last-child{border-bottom:none}
+.snap-date{font-size:13px;font-weight:600}
+.snap-lbl{font-size:11px;color:var(--tx3);margin-top:2px}
+.snap-val{font-size:14px;font-weight:700;font-family:var(--mo);text-align:right}
+.snap-chg{font-size:11px;text-align:right;margin-top:2px}
+
+/* CHARTS */
+.mini-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:6px}
+.mini-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(var(--nh)+var(--sb)+12px);left:50%;transform:translateX(-50%);
+  background:rgba(0,229,204,.9);color:#000;border-radius:24px;padding:9px 18px;
+  font-size:13px;font-weight:700;z-index:999;white-space:nowrap;pointer-events:none;
+  animation:toastIn .3s ease}
+.toast.err{background:rgba(255,107,107,.9);color:#fff}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 24px;color:var(--tx3)}
+.empty svg{width:48px;height:48px;stroke:var(--tx3);margin:0 auto 12px;display:block}
+.empty-tx{font-size:15px;color:var(--tx2);margin-bottom:6px}
+.empty-sb{font-size:13px}
+
+/* DIVIDER */
+.div{height:1px;background:var(--border);margin:0 16px}
+
+/* SETTINGS */
+.set-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.set-lbl{font-size:14px;color:var(--tx);flex:1}
+.set-sub{font-size:12px;color:var(--tx3);margin-top:2px}
+.set-val{font-size:13px;color:var(--tx2);font-family:var(--mo)}
+.fi-inline{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  padding:7px 10px;color:var(--tx);font-size:14px;width:120px;text-align:right}
+
+/* SNAPSHOT COMPARE */
+.cmp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.cmp-row:last-child{border-bottom:none}
+.cmp-nm{font-size:13px;color:var(--tx2);flex:1}
+.cmp-old{font-size:12px;color:var(--tx3);font-family:var(--mo);text-align:right;min-width:80px}
+.cmp-new{font-size:13px;font-weight:600;font-family:var(--mo);text-align:right;min-width:80px}
+.cmp-chg{font-size:11px;text-align:right;min-width:60px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════ SCREEN: OVERVIEW ══════════════ -->
+<div class="scr active" id="scr-overview">
+  <div class="topbar">
+    <h1>Portfolio</h1>
+    <div class="cur-toggle">
+      <button class="cur-btn active" id="cur-thb" onclick="setCur('THB')">฿ THB</button>
+      <button class="cur-btn" id="cur-usd" onclick="setCur('USD')">$ USD</button>
+    </div>
+  </div>
+
+  <!-- Net Worth Card -->
+  <div class="nw-card">
+    <div class="nw-label">Net Worth</div>
+    <div class="nw-val" id="nw-val">฿0</div>
+    <div class="nw-sub" id="nw-sub">กำลังโหลด...</div>
+    <div id="nw-change" class="nw-change neu">— —</div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-wrap">
+    <div class="filter-row" id="filter-row">
+      <button class="ftab active" data-filter="all" onclick="setFilter('all',this)">ทั้งหมด</button>
+    </div>
+  </div>
+
+  <!-- Pie Chart + Legend -->
+  <div class="card" id="pie-section">
+    <div class="pie-wrap">
+      <canvas id="pie-canvas" width="120" height="120"></canvas>
+      <div class="pie-legend" id="pie-legend"></div>
+    </div>
+  </div>
+
+  <!-- Asset Groups -->
+  <div id="asset-groups"></div>
+</div>
+
+<!-- ══════════════ SCREEN: ASSETS ══════════════ -->
+<div class="scr" id="scr-assets">
+  <div class="topbar">
+    <h1>Assets</h1>
+    <button class="btn-sm btn-ghost" onclick="openAddAsset()">+ เพิ่ม</button>
+  </div>
+  <div id="asset-list-full"></div>
+</div>
+
+<!-- ══════════════ SCREEN: SNAPSHOTS ══════════════ -->
+<div class="scr" id="scr-snaps">
+  <div class="topbar">
+    <h1>Snapshots</h1>
+    <button class="btn-sm btn-primary" onclick="saveSnap()">บันทึก</button>
+  </div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:10px">บันทึก snapshot เพื่อเปรียบเทียบ portfolio ย้อนหลัง</div>
+    <div class="fg">
+      <label class="fl">Label (ชื่อ snapshot)</label>
+      <input class="fi" id="snap-label" placeholder="เช่น End of March 2026" type="text">
+    </div>
+  </div>
+  <div class="grp-block" id="snap-list" style="margin:0 16px">
+    <div class="empty"><div class="empty-tx">ยังไม่มี snapshot</div></div>
+  </div>
+</div>
+
+<!-- ══════════════ SCREEN: SETTINGS ══════════════ -->
+<div class="scr" id="scr-settings">
+  <div class="topbar"><h1>Settings</h1></div>
+
+  <div class="grp-block">
+    <div class="set-row">
+      <div><div class="set-lbl">USD/THB Rate</div><div class="set-sub" id="fx-status">Auto via ExchangeRate-API</div></div>
+      <div class="set-val" id="fx-display">—</div>
+    </div>
+    <div class="set-row">
+      <div><div class="set-lbl">ExchangeRate-API Key</div><div class="set-sub" id="fxkey-status">ใส่ key เพื่อ auto fetch</div></div>
+      <input class="fi-inline" id="fxkey-inp" placeholder="key..." type="password" onchange="saveFxKey()">
+    </div>
+    <div class="set-row">
+      <div><div class="set-lbl">Manual USD/THB override</div><div class="set-sub">0 = ใช้ auto rate</div></div>
+      <input class="fi-inline" id="fx-override" placeholder="0" type="number" onchange="saveFxOverride()">
+    </div>
+  </div>
+
+  <div style="margin:16px 16px 8px;font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px">Data</div>
+  <div class="grp-block">
+    <div class="set-row" onclick="exportData()" style="cursor:pointer">
+      <div class="set-lbl">Export JSON</div>
+      <div style="color:var(--c1);font-size:13px">↓ Export</div>
+    </div>
+    <div class="set-row" style="cursor:pointer" onclick="document.getElementById('import-inp').click()">
+      <div class="set-lbl">Import JSON</div>
+      <div style="color:var(--c1);font-size:13px">↑ Import</div>
+    </div>
+    <input type="file" id="import-inp" accept=".json,.txt" style="display:none" onchange="importData(event)">
+    <div class="set-row" onclick="if(confirm('ล้างข้อมูลทั้งหมด?'))clearAll()" style="cursor:pointer">
+      <div class="set-lbl" style="color:var(--c4)">Clear All</div>
+      <div style="color:var(--c4);font-size:13px">✕ Clear</div>
+    </div>
+  </div>
+  <div style="padding-bottom:40px"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <button class="nb active" id="nb-overview" onclick="navTo('overview',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>Overview</span>
+  </button>
+  <button class="nb" id="nb-assets" onclick="navTo('assets',this)">
+    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    <span>Assets</span>
+  </button>
+  <button class="nb" id="nb-snaps" onclick="navTo('snaps',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Snapshots</span>
+  </button>
+  <button class="nb" id="nb-settings" onclick="navTo('settings',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openAddAsset()">+</button>
+
+<!-- TOAST -->
+<div class="toast hidden" id="toast"></div>
+
+<!-- SHEET: ADD/EDIT ASSET -->
+<div class="sheet-bg hidden" id="asset-sheet">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title" id="asset-sheet-title">เพิ่ม Asset</div>
+      <button class="btn-ic" onclick="closeSheet('asset-sheet')" style="margin-left:8px">✕</button>
+    </div>
+    <div class="form-wrap">
+      <!-- Hierarchy -->
+      <div class="fg fi-suggest">
+        <label class="fl">Category</label>
+        <input class="fi" id="f-cat" placeholder="เช่น Crypto, Fund, Stock, Cash" autocomplete="off"
+          oninput="showSuggest('cat',this.value)" onfocus="showSuggest('cat',this.value)">
+        <div class="suggest-list hidden" id="sug-cat"></div>
+      </div>
+      <div class="fg fi-suggest">
+        <label class="fl">Subgroup</label>
+        <input class="fi" id="f-sub" placeholder="เช่น Stable Coin, RMF, SET" autocomplete="off"
+          oninput="showSuggest('sub',this.value)" onfocus="showSuggest('sub',this.value)">
+        <div class="suggest-list hidden" id="sug-sub"></div>
+      </div>
+      <div class="fg fi-suggest">
+        <label class="fl">Broker</label>
+        <input class="fi" id="f-broker" placeholder="เช่น Bitkub, กสิกร, Finansia" autocomplete="off"
+          oninput="showSuggest('broker',this.value)" onfocus="showSuggest('broker',this.value)">
+        <div class="suggest-list hidden" id="sug-broker"></div>
+      </div>
+      <div class="fg fi-suggest">
+        <label class="fl">Name</label>
+        <input class="fi" id="f-name" placeholder="เช่น USDT, KFLTFDIV, PTT" autocomplete="off"
+          oninput="showSuggest('name',this.value);onNameChange()" onfocus="showSuggest('name',this.value)">
+        <div class="suggest-list hidden" id="sug-name"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="fg fi-suggest" style="flex:1">
+          <label class="fl">Ticker (สำหรับ fetch)</label>
+          <input class="fi" id="f-ticker" placeholder="เช่น BTCUSDT, ETHUSDT" autocomplete="off">
+        </div>
+        <div class="fg" style="width:90px">
+          <label class="fl">Currency</label>
+          <select class="fi" id="f-cur" style="appearance:none">
+            <option value="THB">THB</option>
+            <option value="USD" selected>USD</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Quantity / Units</label>
+        <input class="fi" id="f-qty" placeholder="0" type="number" step="any" oninput="recalcImplied()">
+      </div>
+
+      <!-- Price Mode -->
+      <div class="fl" style="margin-bottom:8px">Price Mode</div>
+      <div class="price-mode-row">
+        <button class="pm-btn active auto" id="pm-auto" onclick="setPriceMode('auto')">🟢 Auto</button>
+        <button class="pm-btn imp" id="pm-imp" onclick="setPriceMode('implied')">🟡 Implied</button>
+        <button class="pm-btn man" id="pm-man" onclick="setPriceMode('manual')">🔴 Manual</button>
+      </div>
+
+      <!-- Auto section -->
+      <div id="pm-auto-sec">
+        <div class="fg">
+          <label class="fl">Fetched Price (แสดงอัตโนมัติ)</label>
+          <input class="fi" id="f-fetched" placeholder="กด Fetch เพื่อดึงราคา" type="number" step="any" readonly style="color:var(--c5)">
+        </div>
+        <button class="btn btn-ghost" style="margin-bottom:14px" onclick="fetchPrice()">🔄 Fetch ราคาตอนนี้</button>
+      </div>
+
+      <!-- Implied section -->
+      <div id="pm-imp-sec" class="hidden">
+        <div class="fg">
+          <label class="fl">Total Value (มูลค่ารวมจาก broker app)</label>
+          <input class="fi" id="f-total-val" placeholder="0" type="number" step="any" oninput="recalcImplied()">
+        </div>
+        <div class="implied-calc" id="implied-calc-display">ใส่ Qty และ Total Value เพื่อคำนวณ implied rate</div>
+      </div>
+
+      <!-- Manual section -->
+      <div id="pm-man-sec" class="hidden">
+        <div class="fg">
+          <label class="fl">Price per Unit (ใส่เอง)</label>
+          <input class="fi" id="f-manual-rate" placeholder="0" type="number" step="any">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Note (optional)</label>
+        <input class="fi" id="f-note" placeholder="หมายเหตุ...">
+      </div>
+
+      <button class="btn btn-primary" id="save-asset-btn" onclick="saveAsset()">✓ บันทึก Asset</button>
+      <button class="btn btn-danger" id="del-asset-btn" style="margin-top:8px;display:none" onclick="deleteAsset()">✕ ลบ Asset นี้</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: SNAPSHOT DETAIL -->
+<div class="sheet-bg hidden" id="snap-sheet">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title" id="snap-sheet-title">Snapshot</div>
+      <button class="btn-ic" onclick="closeSheet('snap-sheet')" style="margin-left:8px">✕</button>
+    </div>
+    <div class="form-wrap" id="snap-sheet-body"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// CONSTANTS & COLORS
+// ══════════════════════════════════════════════════
+const CAT_COLORS = ['#00e5cc','#ffb800','#a78bfa','#ff6b6b','#51cf66','#4fc3f7','#ff9f43','#fd79a8','#00cec9','#e17055','#74b9ff','#55efc4'];
+const KEY = 'atv2_data';
+const KEY_FX = 'atv2_fx';
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let S = {
+  assets: [],       // {id, cat, sub, broker, nm, ticker, qty, priceCur, priceMode, fetchedPrice, fetchedAt, totalVal, impliedRate, manualRate, note}
+  snapshots: [],    // {id, label, date, totalTHB, totalUSD, usdthb, assets:[]}
+  settings: { fxKey: '', fxOverride: 0 }
+};
+let G = {
+  cur: 'THB',       // display currency
+  usdthb: 34.5,     // current FX rate
+  filter: 'all',    // active filter
+  editId: null,     // asset being edited
+  priceMode: 'auto',
+  catColors: {},    // category → color index
+  colorIdx: 0,
+};
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  loadSettings();
+  fetchFX();
+  fetchAllCryptoPrices();
+  renderAll();
+  document.addEventListener('click', hideSuggestsOnOutsideClick);
+});
+
+function loadState() {
+  try { const d = localStorage.getItem(KEY); if (d) S = { ...S, ...JSON.parse(d) }; } catch(e) {}
+}
+function saveState() {
+  localStorage.setItem(KEY, JSON.stringify(S));
+}
+function loadSettings() {
+  try {
+    const d = localStorage.getItem(KEY_FX);
+    if (d) {
+      const p = JSON.parse(d);
+      S.settings = { ...S.settings, ...p };
+      document.getElementById('fxkey-inp').value = p.fxKey || '';
+      document.getElementById('fx-override').value = p.fxOverride || 0;
+    }
+  } catch(e) {}
+}
+function saveSettings() {
+  localStorage.setItem(KEY_FX, JSON.stringify(S.settings));
+}
+
+// ══════════════════════════════════════════════════
+// FX & CRYPTO FETCH
+// ══════════════════════════════════════════════════
+async function fetchFX() {
+  if (S.settings.fxOverride > 0) { G.usdthb = S.settings.fxOverride; updateFxDisplay(); return; }
+  if (!S.settings.fxKey) { updateFxDisplay(); return; }
+  try {
+    const r = await fetch(`https://v6.exchangerate-api.com/v6/${S.settings.fxKey}/latest/USD`);
+    const d = await r.json();
+    if (d.result === 'success') {
+      G.usdthb = d.conversion_rates.THB;
+      document.getElementById('fx-status').textContent = `Updated ${new Date().toLocaleTimeString('th')}`;
+    }
+  } catch(e) {}
+  updateFxDisplay();
+}
+function updateFxDisplay() {
+  document.getElementById('fx-display').textContent = `฿${G.usdthb.toFixed(2)}`;
+  renderAll();
+}
+
+// Fetch all crypto prices at once
+let cryptoPrices = {}; // ticker → price in USD
+async function fetchAllCryptoPrices() {
+  const tickers = [...new Set(S.assets.filter(a => a.priceMode === 'auto' && a.ticker).map(a => a.ticker.toUpperCase()))];
+  if (!tickers.length) return;
+  try {
+    await Promise.all(tickers.map(t => fetchSingleCrypto(t)));
+    renderAll();
+  } catch(e) {}
+}
+async function fetchSingleCrypto(ticker) {
+  try {
+    const sym = ticker.includes('USDT') ? ticker : ticker + 'USDT';
+    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+    const d = await r.json();
+    if (d.price) cryptoPrices[ticker.toUpperCase()] = parseFloat(d.price);
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════
+// VALUE CALCULATION
+// ══════════════════════════════════════════════════
+function getAssetValueTHB(a) {
+  const qty = parseFloat(a.qty) || 0;
+  let priceInCur = 0;
+  const mode = a.priceMode || 'manual';
+
+  if (mode === 'auto') {
+    const tk = (a.ticker || '').toUpperCase();
+    const p = cryptoPrices[tk];
+    if (p) priceInCur = p;
+    else if (a.fetchedPrice) priceInCur = parseFloat(a.fetchedPrice) || 0;
+  } else if (mode === 'implied') {
+    priceInCur = parseFloat(a.impliedRate) || 0;
+  } else {
+    priceInCur = parseFloat(a.manualRate) || 0;
+  }
+
+  const valueInCur = qty * priceInCur;
+  if (a.priceCur === 'USD') return valueInCur * G.usdthb;
+  return valueInCur;
+}
+
+function getAssetDisplayPrice(a) {
+  const mode = a.priceMode || 'manual';
+  if (mode === 'auto') {
+    const tk = (a.ticker || '').toUpperCase();
+    return cryptoPrices[tk] || parseFloat(a.fetchedPrice) || 0;
+  } else if (mode === 'implied') return parseFloat(a.impliedRate) || 0;
+  return parseFloat(a.manualRate) || 0;
+}
+
+function getPriceTag(a) {
+  const mode = a.priceMode || 'manual';
+  if (mode === 'auto') {
+    const tk = (a.ticker || '').toUpperCase();
+    return cryptoPrices[tk] ? '<span class="ptag pt-live">live</span>' : '<span class="ptag pt-stale">stale</span>';
+  }
+  if (mode === 'implied') return '<span class="ptag pt-imp">implied</span>';
+  return '<span class="ptag pt-man">manual</span>';
+}
+
+function fmtCur(thbVal) {
+  if (G.cur === 'USD') return '$' + fmtN(thbVal / G.usdthb, 2);
+  if (thbVal >= 1e6) return '฿' + fmtN(thbVal/1e6, 2) + 'M';
+  if (thbVal >= 1e3) return '฿' + fmtN(thbVal, 0);
+  return '฿' + fmtN(thbVal, 2);
+}
+function fmtN(n, dec=2) {
+  if (isNaN(n) || n === null) return '—';
+  return Number(n).toLocaleString('th-TH', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+// ══════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════
+function navTo(scr, btn) {
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+  document.getElementById('scr-' + scr).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('fab').classList.toggle('hidden', scr !== 'overview' && scr !== 'assets');
+  if (scr === 'overview') renderOverview();
+  if (scr === 'assets') renderAssetList();
+  if (scr === 'snaps') renderSnapList();
+}
+function setCur(c) {
+  G.cur = c;
+  document.getElementById('cur-thb').classList.toggle('active', c === 'THB');
+  document.getElementById('cur-usd').classList.toggle('active', c === 'USD');
+  renderOverview();
+}
+
+// ══════════════════════════════════════════════════
+// COLOR SYSTEM
+// ══════════════════════════════════════════════════
+function getCatColor(cat) {
+  if (!G.catColors[cat]) {
+    G.catColors[cat] = CAT_COLORS[G.colorIdx % CAT_COLORS.length];
+    G.colorIdx++;
+  }
+  return G.catColors[cat];
+}
+
+// ══════════════════════════════════════════════════
+// FILTER & OVERVIEW
+// ══════════════════════════════════════════════════
+function buildFilterTabs() {
+  const cats = [...new Set(S.assets.map(a => a.cat).filter(Boolean))];
+  const brokers = [...new Set(S.assets.map(a => a.broker).filter(Boolean))];
+  const subs = [...new Set(S.assets.map(a => a.sub).filter(Boolean))];
+
+  const row = document.getElementById('filter-row');
+  row.innerHTML = `<button class="ftab ${G.filter==='all'?'active':''}" data-filter="all" onclick="setFilter('all',this)">ทั้งหมด</button>`;
+
+  cats.forEach(c => { row.innerHTML += `<button class="ftab ${G.filter===('cat:'+c)?'active':''}" onclick="setFilter('cat:${c}',this)">${c}</button>`; });
+  brokers.forEach(b => { row.innerHTML += `<button class="ftab ${G.filter===('broker:'+b)?'active':''}" onclick="setFilter('broker:${b}',this)">🏦 ${b}</button>`; });
+  subs.forEach(s => { row.innerHTML += `<button class="ftab ${G.filter===('sub:'+s)?'active':''}" onclick="setFilter('sub:${s}',this)">${s}</button>`; });
+}
+
+function setFilter(f, btn) {
+  G.filter = f;
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOverview();
+}
+
+function getFilteredAssets() {
+  if (G.filter === 'all') return S.assets;
+  const [type, val] = G.filter.split(':');
+  if (type === 'cat') return S.assets.filter(a => a.cat === val);
+  if (type === 'broker') return S.assets.filter(a => a.broker === val);
+  if (type === 'sub') return S.assets.filter(a => a.sub === val);
+  return S.assets;
+}
+
+function renderOverview() {
+  buildFilterTabs();
+  const filtered = getFilteredAssets();
+  const total = filtered.reduce((s, a) => s + getAssetValueTHB(a), 0);
+
+  // Net worth
+  document.getElementById('nw-val').textContent = fmtCur(total);
+  const rate = G.cur === 'USD' ? `Rate: ฿${G.usdthb.toFixed(2)}` : `≈ $${fmtN(total/G.usdthb, 0)}`;
+  document.getElementById('nw-sub').textContent = `${filtered.length} assets • ${rate}`;
+
+  // Change vs last snapshot
+  if (S.snapshots.length > 0) {
+    const last = S.snapshots[S.snapshots.length - 1];
+    const prev = last.totalTHB || 0;
+    const diff = total - prev;
+    const pct = prev ? (diff / prev * 100) : 0;
+    const el = document.getElementById('nw-change');
+    el.className = 'nw-change ' + (diff > 0 ? 'up' : diff < 0 ? 'dn' : 'neu');
+    el.textContent = `${diff >= 0 ? '+' : ''}${fmtCur(diff)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%) vs ${last.label || last.date}`;
+  } else {
+    const el = document.getElementById('nw-change');
+    el.className = 'nw-change neu';
+    el.textContent = 'ยังไม่มี snapshot เพื่อเปรียบเทียบ';
+  }
+
+  // Pie chart — group by relevant dimension
+  renderPie(filtered);
+
+  // Asset groups
+  renderGroupedAssets(filtered);
+}
+
+// ══════════════════════════════════════════════════
+// PIE CHART
+// ══════════════════════════════════════════════════
+function renderPie(assets) {
+  // Determine grouping based on filter
+  let groupKey;
+  if (G.filter === 'all') groupKey = 'cat';
+  else if (G.filter.startsWith('cat:')) groupKey = 'sub';
+  else if (G.filter.startsWith('broker:')) groupKey = 'nm';
+  else if (G.filter.startsWith('sub:')) groupKey = 'nm';
+  else groupKey = 'cat';
+
+  const groups = {};
+  assets.forEach(a => {
+    const key = a[groupKey] || 'Other';
+    if (!groups[key]) groups[key] = 0;
+    groups[key] += getAssetValueTHB(a);
+  });
+
+  const total = Object.values(groups).reduce((s, v) => s + v, 0);
+  const entries = Object.entries(groups).sort((a, b) => b[1] - a[1]);
+
+  // Canvas
+  const canvas = document.getElementById('pie-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 120, 120);
+
+  if (!total) {
+    document.getElementById('pie-legend').innerHTML = '<div style="color:var(--tx3);font-size:12px">ไม่มีข้อมูล</div>';
+    return;
+  }
+
+  let angle = -Math.PI / 2;
+  const colors = entries.map((_, i) => CAT_COLORS[i % CAT_COLORS.length]);
+
+  entries.forEach(([key, val], i) => {
+    const slice = (val / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(60, 60);
+    ctx.arc(60, 60, 54, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+    angle += slice;
+  });
+
+  // Center hole
+  ctx.beginPath();
+  ctx.arc(60, 60, 32, 0, 2 * Math.PI);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg2') || '#0e1012';
+  ctx.fill();
+
+  // Center text
+  ctx.fillStyle = '#e8f0f5';
+  ctx.font = 'bold 11px -apple-system';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(G.cur === 'USD' ? '$' + fmtN(total/G.usdthb,0) : '฿' + fmtN(total/1000,0)+'K', 60, 60);
+
+  // Legend
+  const legendEl = document.getElementById('pie-legend');
+  legendEl.innerHTML = entries.slice(0, 6).map(([key, val], i) => `
+    <div class="leg-item">
+      <div class="leg-dot" style="background:${colors[i]}"></div>
+      <div class="leg-name">${key}</div>
+      <div>
+        <div class="leg-val">${fmtCur(val)}</div>
+        <div class="leg-pct">${(val/total*100).toFixed(1)}%</div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+// GROUPED ASSET DISPLAY
+// ══════════════════════════════════════════════════
+function renderGroupedAssets(assets) {
+  // Group by category → subgroup → broker
+  const tree = {};
+  assets.forEach(a => {
+    const cat = a.cat || 'Other';
+    const sub = a.sub || 'General';
+    const broker = a.broker || 'Other';
+    if (!tree[cat]) tree[cat] = {};
+    if (!tree[cat][sub]) tree[cat][sub] = {};
+    if (!tree[cat][sub][broker]) tree[cat][sub][broker] = [];
+    tree[cat][sub][broker].push(a);
+  });
+
+  const total = assets.reduce((s, a) => s + getAssetValueTHB(a), 0);
+  const el = document.getElementById('asset-groups');
+
+  if (!assets.length) {
+    el.innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="empty-tx">ยังไม่มี asset</div>
+      <div class="empty-sb">กด + เพื่อเพิ่ม asset แรก</div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  Object.entries(tree).forEach(([cat, subs]) => {
+    const catTotal = Object.values(subs).flatMap(s => Object.values(s).flat()).reduce((s, a) => s + getAssetValueTHB(a), 0);
+    const color = getCatColor(cat);
+
+    html += `<div style="margin:0 16px 4px;display:flex;align-items:center;gap:6px;padding:8px 0 4px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--tx2);flex:1">${cat}</div>
+      <div style="font-size:12px;font-family:var(--mo);color:var(--tx2)">${fmtCur(catTotal)}</div>
+      <div style="font-size:11px;color:var(--tx3);font-family:var(--mo)">${(catTotal/total*100).toFixed(1)}%</div>
+    </div>`;
+
+    Object.entries(subs).forEach(([sub, brokers]) => {
+      const subTotal = Object.values(brokers).flat().reduce((s, a) => s + getAssetValueTHB(a), 0);
+
+      html += `<div class="grp-block">`;
+      // Sub header
+      html += `<div style="padding:8px 14px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <div style="font-size:11px;color:var(--tx3);flex:1">${sub}</div>
+        <div style="font-size:12px;font-family:var(--mo);color:var(--tx2)">${fmtCur(subTotal)}</div>
+      </div>`;
+
+      Object.entries(brokers).forEach(([broker, items]) => {
+        const brokerTotal = items.reduce((s, a) => s + getAssetValueTHB(a), 0);
+        html += `<div style="padding:6px 14px 4px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);display:flex;align-items:center">
+          <div style="font-size:11px;color:var(--c1);flex:1">🏦 ${broker}</div>
+          <div style="font-size:11px;font-family:var(--mo);color:var(--tx3)">${fmtCur(brokerTotal)}</div>
+        </div>`;
+
+        items.forEach(a => {
+          const val = getAssetValueTHB(a);
+          const price = getAssetDisplayPrice(a);
+          const priceLbl = price ? (a.priceCur === 'USD' ? `$${fmtN(price, price < 1 ? 4 : 2)}` : `฿${fmtN(price, price < 1 ? 4 : 2)}`) : '';
+          html += `<div class="asset-row" onclick="openEditAsset('${a.id}')">
+            <div class="a-dot" style="background:${color}"></div>
+            <div class="a-info">
+              <div class="a-nm">${a.nm}${getPriceTag(a)}</div>
+              <div class="a-sb">${a.qty ? fmtN(parseFloat(a.qty), parseFloat(a.qty) < 1 ? 4 : 0) + ' units' : ''}${priceLbl ? ' × '+priceLbl : ''}${a.note ? ' · '+a.note : ''}</div>
+            </div>
+            <div class="a-rt">
+              <div class="a-vl">${fmtCur(val)}</div>
+              <div class="a-pc">${total ? (val/total*100).toFixed(1)+'%' : ''}</div>
+            </div>
+          </div>`;
+        });
+      });
+      html += `</div>`;
+    });
+  });
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════
+// ASSET LIST (full)
+// ══════════════════════════════════════════════════
+function renderAssetList() {
+  const el = document.getElementById('asset-list-full');
+  if (!S.assets.length) {
+    el.innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="empty-tx">ยังไม่มี asset</div><div class="empty-sb">กด + เพื่อเพิ่ม</div>
+    </div>`;
+    return;
+  }
+  const sorted = [...S.assets].sort((a, b) => (a.cat+a.sub+a.broker+a.nm).localeCompare(b.cat+b.sub+b.broker+b.nm));
+  const total = sorted.reduce((s, a) => s + getAssetValueTHB(a), 0);
+  el.innerHTML = `<div class="grp-block" style="margin:0 16px">` +
+    sorted.map(a => {
+      const val = getAssetValueTHB(a);
+      const color = getCatColor(a.cat);
+      return `<div class="asset-row" onclick="openEditAsset('${a.id}')">
+        <div class="a-dot" style="background:${color}"></div>
+        <div class="a-info">
+          <div class="a-nm">${a.nm}${getPriceTag(a)}</div>
+          <div class="a-sb">${[a.cat, a.sub, a.broker].filter(Boolean).join(' › ')}</div>
+        </div>
+        <div class="a-rt">
+          <div class="a-vl">${fmtCur(val)}</div>
+          <div class="a-pc">${total ? (val/total*100).toFixed(1)+'%' : ''}</div>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+}
+
+// ══════════════════════════════════════════════════
+// ADD / EDIT ASSET
+// ══════════════════════════════════════════════════
+function openAddAsset() {
+  G.editId = null;
+  G.priceMode = 'auto';
+  document.getElementById('asset-sheet-title').textContent = 'เพิ่ม Asset';
+  document.getElementById('del-asset-btn').style.display = 'none';
+  document.getElementById('save-asset-btn').textContent = '✓ บันทึก Asset';
+  clearForm();
+  setPriceMode('auto');
+  document.getElementById('asset-sheet').classList.remove('hidden');
+}
+
+function openEditAsset(id) {
+  const a = S.assets.find(x => x.id === id);
+  if (!a) return;
+  G.editId = id;
+  document.getElementById('asset-sheet-title').textContent = 'แก้ไข Asset';
+  document.getElementById('del-asset-btn').style.display = 'block';
+  document.getElementById('save-asset-btn').textContent = '✓ อัปเดต Asset';
+
+  document.getElementById('f-cat').value = a.cat || '';
+  document.getElementById('f-sub').value = a.sub || '';
+  document.getElementById('f-broker').value = a.broker || '';
+  document.getElementById('f-name').value = a.nm || '';
+  document.getElementById('f-ticker').value = a.ticker || '';
+  document.getElementById('f-cur').value = a.priceCur || 'USD';
+  document.getElementById('f-qty').value = a.qty || '';
+  document.getElementById('f-note').value = a.note || '';
+
+  const mode = a.priceMode || 'auto';
+  setPriceMode(mode);
+  if (mode === 'auto' && a.fetchedPrice) document.getElementById('f-fetched').value = a.fetchedPrice;
+  if (mode === 'implied') {
+    document.getElementById('f-total-val').value = a.totalVal || '';
+    recalcImplied();
+  }
+  if (mode === 'manual') document.getElementById('f-manual-rate').value = a.manualRate || '';
+
+  document.getElementById('asset-sheet').classList.remove('hidden');
+}
+
+function clearForm() {
+  ['f-cat','f-sub','f-broker','f-name','f-ticker','f-note','f-qty','f-fetched','f-total-val','f-manual-rate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-cur').value = 'USD';
+  document.getElementById('implied-calc-display').textContent = 'ใส่ Qty และ Total Value เพื่อคำนวณ implied rate';
+}
+
+function setPriceMode(mode) {
+  G.priceMode = mode;
+  ['auto','imp','man'].forEach(m => {
+    const btn = document.getElementById('pm-' + m);
+    if (btn) btn.classList.remove('active');
+  });
+  const modeMap = { auto: 'auto', implied: 'imp', manual: 'man' };
+  const btnId = 'pm-' + (modeMap[mode] || mode);
+  document.getElementById(btnId)?.classList.add('active');
+  document.getElementById('pm-auto-sec').classList.toggle('hidden', mode !== 'auto');
+  document.getElementById('pm-imp-sec').classList.toggle('hidden', mode !== 'implied');
+  document.getElementById('pm-man-sec').classList.toggle('hidden', mode !== 'manual');
+}
+
+function recalcImplied() {
+  const qty = parseFloat(document.getElementById('f-qty').value) || 0;
+  const total = parseFloat(document.getElementById('f-total-val').value) || 0;
+  const el = document.getElementById('implied-calc-display');
+  if (qty && total) {
+    const rate = total / qty;
+    el.innerHTML = `Implied rate = <strong>${fmtN(rate, rate < 1 ? 6 : 2)}</strong> per unit`;
+  } else {
+    el.textContent = 'ใส่ Qty และ Total Value เพื่อคำนวณ implied rate';
+  }
+}
+
+async function fetchPrice() {
+  const ticker = document.getElementById('f-ticker').value.trim();
+  if (!ticker) { toast('กรุณาใส่ Ticker ก่อน', true); return; }
+  toast('กำลัง fetch...');
+  try {
+    const sym = ticker.toUpperCase().includes('USDT') ? ticker.toUpperCase() : ticker.toUpperCase() + 'USDT';
+    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+    const d = await r.json();
+    if (d.price) {
+      document.getElementById('f-fetched').value = d.price;
+      toast(`✓ ${ticker} = $${parseFloat(d.price).toFixed(4)}`);
+    } else { toast('ไม่พบ ticker นี้', true); }
+  } catch(e) { toast('Fetch ไม่สำเร็จ', true); }
+}
+
+function onNameChange() {
+  const nm = document.getElementById('f-name').value.trim().toUpperCase();
+  // Auto-suggest ticker for common coins
+  const commonTickers = { BTC:'BTCUSDT', ETH:'ETHUSDT', BNB:'BNBUSDT', SOL:'SOLUSDT',
+    USDT:'USDT', USDC:'USDC', XRP:'XRPUSDT', ADA:'ADAUSDT', DOGE:'DOGEUSDT',
+    DOT:'DOTUSDT', AVAX:'AVAXUSDT', LINK:'LINKUSDT', MATIC:'MATICUSDT',
+    NEAR:'NEARUSDT', UNI:'UNIUSDT', AAVE:'AAVEUSDT', WLD:'WLDUSDT' };
+  if (commonTickers[nm] && !document.getElementById('f-ticker').value) {
+    document.getElementById('f-ticker').value = commonTickers[nm];
+  }
+}
+
+function saveAsset() {
+  const cat = document.getElementById('f-cat').value.trim();
+  const sub = document.getElementById('f-sub').value.trim();
+  const broker = document.getElementById('f-broker').value.trim();
+  const nm = document.getElementById('f-name').value.trim();
+  const qty = document.getElementById('f-qty').value;
+
+  if (!cat || !sub || !broker || !nm) { toast('กรุณาใส่ข้อมูลให้ครบ (Category, Subgroup, Broker, Name)', true); return; }
+
+  const mode = G.priceMode;
+  const obj = {
+    id: G.editId || `a_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    cat, sub, broker, nm,
+    ticker: document.getElementById('f-ticker').value.trim(),
+    priceCur: document.getElementById('f-cur').value,
+    qty: parseFloat(qty) || 0,
+    note: document.getElementById('f-note').value.trim(),
+    priceMode: mode,
+    fetchedPrice: mode === 'auto' ? (parseFloat(document.getElementById('f-fetched').value) || 0) : 0,
+    fetchedAt: mode === 'auto' ? Date.now() : 0,
+    totalVal: mode === 'implied' ? (parseFloat(document.getElementById('f-total-val').value) || 0) : 0,
+    impliedRate: mode === 'implied' ? (() => {
+      const q = parseFloat(document.getElementById('f-qty').value) || 1;
+      const v = parseFloat(document.getElementById('f-total-val').value) || 0;
+      return v / q;
+    })() : 0,
+    manualRate: mode === 'manual' ? (parseFloat(document.getElementById('f-manual-rate').value) || 0) : 0,
+  };
+
+  if (G.editId) {
+    const idx = S.assets.findIndex(a => a.id === G.editId);
+    if (idx >= 0) S.assets[idx] = obj;
+  } else {
+    S.assets.push(obj);
+  }
+
+  saveState();
+  closeSheet('asset-sheet');
+  toast(G.editId ? '✓ อัปเดตแล้ว' : '✓ เพิ่ม Asset แล้ว');
+  fetchAllCryptoPrices();
+  renderAll();
+}
+
+function deleteAsset() {
+  if (!G.editId) return;
+  if (!confirm('ลบ asset นี้?')) return;
+  S.assets = S.assets.filter(a => a.id !== G.editId);
+  saveState();
+  closeSheet('asset-sheet');
+  toast('ลบแล้ว');
+  renderAll();
+}
+
+// ══════════════════════════════════════════════════
+// SMART SUGGEST
+// ══════════════════════════════════════════════════
+function getSuggestItems(field) {
+  const cat = document.getElementById('f-cat').value.trim();
+  const sub = document.getElementById('f-sub').value.trim();
+  const broker = document.getElementById('f-broker').value.trim();
+
+  if (field === 'cat') return [...new Set(S.assets.map(a => a.cat).filter(Boolean))];
+  if (field === 'sub') {
+    const all = [...new Set(S.assets.map(a => a.sub).filter(Boolean))];
+    const inCat = cat ? [...new Set(S.assets.filter(a => a.cat === cat).map(a => a.sub).filter(Boolean))] : [];
+    return [...new Set([...inCat, ...all])];
+  }
+  if (field === 'broker') {
+    const all = [...new Set(S.assets.map(a => a.broker).filter(Boolean))];
+    const filtered = cat ? S.assets.filter(a => a.cat === cat && (!sub || a.sub === sub)) : S.assets;
+    const relevant = [...new Set(filtered.map(a => a.broker).filter(Boolean))];
+    return [...new Set([...relevant, ...all])];
+  }
+  if (field === 'name') {
+    const filtered = S.assets.filter(a => (!cat || a.cat === cat) && (!sub || a.sub === sub) && (!broker || a.broker === broker));
+    return [...new Set(filtered.map(a => a.nm).filter(Boolean))];
+  }
+  return [];
+}
+
+function showSuggest(field, query) {
+  const sugEl = document.getElementById('sug-' + field);
+  const items = getSuggestItems(field);
+  const q = query.trim().toLowerCase();
+  const filtered = q ? items.filter(i => i.toLowerCase().includes(q)) : items;
+
+  if (!filtered.length && !q) { sugEl.classList.add('hidden'); return; }
+
+  let html = filtered.map(i => `<div class="sug-item" onclick="selectSuggest('${field}','${i.replace(/'/g,"\\'")}')"> ${i}</div>`).join('');
+  if (q && !filtered.find(i => i.toLowerCase() === q)) {
+    html += `<div class="sug-item new-item" onclick="selectSuggest('${field}','${query.replace(/'/g,"\\'")}')">+ "${query}" (ใหม่)</div>`;
+  }
+  sugEl.innerHTML = html;
+  sugEl.classList.remove('hidden');
+}
+
+function selectSuggest(field, val) {
+  document.getElementById('f-' + (field === 'name' ? 'name' : field === 'sub' ? 'sub' : field === 'broker' ? 'broker' : 'cat')).value = val;
+  document.getElementById('sug-' + field).classList.add('hidden');
+  // Auto-cascade suggest for next field
+  if (field === 'cat') setTimeout(() => document.getElementById('f-sub').focus(), 100);
+  if (field === 'sub') setTimeout(() => document.getElementById('f-broker').focus(), 100);
+  if (field === 'broker') setTimeout(() => document.getElementById('f-name').focus(), 100);
+  if (field === 'name') onNameChange();
+}
+
+function hideSuggestsOnOutsideClick(e) {
+  if (!e.target.closest('.fi-suggest')) {
+    document.querySelectorAll('.suggest-list').forEach(s => s.classList.add('hidden'));
+  }
+}
+
+// ══════════════════════════════════════════════════
+// SNAPSHOTS
+// ══════════════════════════════════════════════════
+function saveSnap() {
+  const label = document.getElementById('snap-label').value.trim() || new Date().toLocaleDateString('th-TH');
+  const totalTHB = S.assets.reduce((s, a) => s + getAssetValueTHB(a), 0);
+  const snap = {
+    id: `s_${Date.now()}`,
+    label,
+    date: new Date().toLocaleDateString('th-TH'),
+    totalTHB,
+    totalUSD: totalTHB / G.usdthb,
+    usdthb: G.usdthb,
+    assets: JSON.parse(JSON.stringify(S.assets)),
+    cryptoPrices: { ...cryptoPrices },
+    ts: Date.now(),
+  };
+  S.snapshots.push(snap);
+  saveState();
+  document.getElementById('snap-label').value = '';
+  toast(`✓ บันทึก snapshot: ${label}`);
+  renderSnapList();
+  renderOverview();
+}
+
+function renderSnapList() {
+  const el = document.getElementById('snap-list');
+  if (!S.snapshots.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-tx">ยังไม่มี snapshot</div><div class="empty-sb">กด "บันทึก" เพื่อสร้าง snapshot แรก</div></div>`;
+    return;
+  }
+  const sorted = [...S.snapshots].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const currentTHB = S.assets.reduce((s, a) => s + getAssetValueTHB(a), 0);
+
+  el.innerHTML = sorted.map((snap, i) => {
+    const diff = currentTHB - snap.totalTHB;
+    const pct = snap.totalTHB ? (diff / snap.totalTHB * 100) : 0;
+    const isUp = diff >= 0;
+    return `<div class="snap-row" onclick="openSnapDetail('${snap.id}')">
+      <div style="flex:1">
+        <div class="snap-date">${snap.label || snap.date}</div>
+        <div class="snap-lbl">${snap.date} · ฿${fmtN(snap.usdthb, 2)}/USD · ${(snap.assets||[]).length} assets</div>
+      </div>
+      <div>
+        <div class="snap-val">${G.cur==='USD' ? '$'+fmtN(snap.totalUSD,0) : '฿'+fmtN(snap.totalTHB,0)}</div>
+        <div class="snap-chg" style="color:${isUp?'var(--c5)':'var(--c4)'}">${isUp?'+':''}${pct.toFixed(2)}% vs now</div>
+      </div>
+      <button onclick="event.stopPropagation();deleteSnap('${snap.id}')" style="padding:6px 8px;border-radius:8px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);color:var(--c4);font-size:11px;margin-left:8px">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteSnap(id) {
+  if (!confirm('ลบ snapshot นี้?')) return;
+  S.snapshots = S.snapshots.filter(s => s.id !== id);
+  saveState();
+  renderSnapList();
+  renderOverview();
+  toast('ลบ snapshot แล้ว');
+}
+
+function openSnapDetail(id) {
+  const snap = S.snapshots.find(s => s.id === id);
+  if (!snap) return;
+  const currentTHB = S.assets.reduce((sum, a) => sum + getAssetValueTHB(a), 0);
+
+  // Build comparison
+  const snapAssets = snap.assets || [];
+  const currentById = {};
+  S.assets.forEach(a => currentById[a.id] = getAssetValueTHB(a));
+  const snapById = {};
+  snapAssets.forEach(a => {
+    // Recalculate snap value with snap prices
+    let val = 0;
+    const qty = parseFloat(a.qty) || 0;
+    const mode = a.priceMode || 'manual';
+    let price = 0;
+    if (mode === 'auto') price = parseFloat(snap.cryptoPrices?.[a.ticker?.toUpperCase()] || a.fetchedPrice) || 0;
+    else if (mode === 'implied') price = parseFloat(a.impliedRate) || 0;
+    else price = parseFloat(a.manualRate) || 0;
+    val = qty * price * (a.priceCur === 'USD' ? (snap.usdthb || G.usdthb) : 1);
+    snapById[a.id] = val;
+  });
+
+  let compareHtml = '';
+  snapAssets.forEach(a => {
+    const old = snapById[a.id] || 0;
+    const now = currentById[a.id] || 0;
+    const diff = now - old;
+    const pct = old ? (diff/old*100) : 0;
+    compareHtml += `<div class="cmp-row">
+      <div class="cmp-nm">${a.cat} › ${a.nm}</div>
+      <div class="cmp-old">฿${fmtN(old, 0)}</div>
+      <div class="cmp-new">฿${fmtN(now, 0)}</div>
+      <div class="cmp-chg" style="color:${diff>=0?'var(--c5)':'var(--c4)'}">${diff>=0?'+':''}${pct.toFixed(1)}%</div>
+    </div>`;
+  });
+
+  const totalDiff = currentTHB - snap.totalTHB;
+  const totalPct = snap.totalTHB ? (totalDiff/snap.totalTHB*100) : 0;
+
+  document.getElementById('snap-sheet-title').textContent = snap.label || snap.date;
+  document.getElementById('snap-sheet-body').innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <div style="flex:1;background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">Snapshot</div>
+        <div style="font-size:18px;font-weight:700;font-family:var(--mo)">฿${fmtN(snap.totalTHB,0)}</div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">ปัจจุบัน</div>
+        <div style="font-size:18px;font-weight:700;font-family:var(--mo)">฿${fmtN(currentTHB,0)}</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding:12px;background:${totalDiff>=0?'rgba(81,207,102,.08)':'rgba(255,107,107,.08)'};border-radius:10px;margin-bottom:16px">
+      <div style="font-size:22px;font-weight:700;color:${totalDiff>=0?'var(--c5)':'var(--c4)'};font-family:var(--mo)">
+        ${totalDiff>=0?'+':''}฿${fmtN(totalDiff,0)} (${totalPct>=0?'+':''}${totalPct.toFixed(2)}%)
+      </div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:4px">เปลี่ยนแปลง</div>
+    </div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">เปรียบเทียบรายตัว</div>
+    <div style="display:flex;gap:0;margin-bottom:6px;font-size:10px;color:var(--tx3)">
+      <div style="flex:1">Asset</div>
+      <div style="min-width:80px;text-align:right">Snapshot</div>
+      <div style="min-width:80px;text-align:right">ปัจจุบัน</div>
+      <div style="min-width:60px;text-align:right">เปลี่ยน</div>
+    </div>
+    ${compareHtml}
+  `;
+  document.getElementById('snap-sheet').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════
+function saveFxKey() {
+  S.settings.fxKey = document.getElementById('fxkey-inp').value.trim();
+  saveSettings();
+  fetchFX();
+  toast('บันทึก API Key แล้ว');
+}
+function saveFxOverride() {
+  S.settings.fxOverride = parseFloat(document.getElementById('fx-override').value) || 0;
+  saveSettings();
+  if (S.settings.fxOverride > 0) G.usdthb = S.settings.fxOverride;
+  else fetchFX();
+  renderAll();
+  toast('บันทึก rate override แล้ว');
+}
+
+// ══════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════════════
+function exportData() {
+  const json = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), ...S }, null, 2);
+  const old = document.getElementById('xm'); if (old) old.remove();
+  const o = document.createElement('div'); o.id = 'xm';
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9999;display:flex;flex-direction:column;padding:16px;gap:10px;box-sizing:border-box;padding-bottom:calc(env(safe-area-inset-bottom,0px)+16px)';
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-shrink:0';
+  const ttl = document.createElement('div');
+  ttl.innerHTML = '<div style="font-size:16px;font-weight:700;color:#fff">📥 Export JSON</div><div style="font-size:12px;color:#8899aa;margin-top:2px">Copy → บันทึกใน Notes หรือ Files</div>';
+  const cls = document.createElement('button');
+  cls.textContent = '✕'; cls.onclick = () => o.remove();
+  cls.style.cssText = 'background:none;border:none;color:#8899aa;font-size:22px;cursor:pointer;padding:4px';
+  hdr.appendChild(ttl); hdr.appendChild(cls);
+  const ta = document.createElement('textarea');
+  ta.readOnly = true; ta.value = json;
+  ta.style.cssText = 'flex:1;background:#0e1012;border:1px solid #1e2428;border-radius:8px;color:#00e5cc;font-family:monospace;font-size:10px;padding:10px;resize:none;-webkit-user-select:all;user-select:all';
+  const btn = document.createElement('button');
+  btn.textContent = '📋 Copy All JSON';
+  btn.style.cssText = 'background:#00e5cc;border:none;border-radius:10px;color:#000;font-weight:700;font-size:16px;padding:13px;cursor:pointer;flex-shrink:0';
+  btn.onclick = () => {
+    ta.select(); ta.setSelectionRange(0, 99999);
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(ta.value).then(() => toast('Copied ✓'));
+    else { try { document.execCommand('copy'); toast('Copied ✓'); } catch(e) {} }
+  };
+  o.appendChild(hdr); o.appendChild(ta); o.appendChild(btn);
+  document.body.appendChild(o);
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.assets) S.assets = d.assets;
+      if (d.snapshots) S.snapshots = d.snapshots;
+      if (d.settings) S.settings = { ...S.settings, ...d.settings };
+      saveState();
+      fetchAllCryptoPrices();
+      renderAll();
+      toast(`✓ Import สำเร็จ: ${S.assets.length} assets`);
+    } catch(err) { toast('ไฟล์ไม่ถูกต้อง', true); }
+  };
+  r.readAsText(file); e.target.value = '';
+}
+
+function clearAll() {
+  S.assets = []; S.snapshots = [];
+  saveState(); renderAll(); toast('ล้างข้อมูลแล้ว');
+}
+
+// ══════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════
+function renderAll() {
+  renderOverview();
+  renderAssetList();
+  renderSnapList();
+}
+
+function closeSheet(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function toast(msg, isErr = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 2800);
+}
+</script>
+</body>
+</html>
