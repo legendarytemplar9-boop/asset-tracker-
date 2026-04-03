@@ -70,8 +70,8 @@ input,textarea,select{font-family:var(--fn);outline:none}
 .ftab.active{background:var(--c1);color:#000;border-color:var(--c1)}
 
 /* PIE CHART */
-.pie-wrap{display:flex;gap:16px;align-items:center;margin-bottom:8px}
-.pie-legend{flex:1;min-width:0}
+.pie-wrap{display:flex;flex-direction:column;gap:14px;margin-bottom:8px}
+.pie-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .leg-item{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer}
 .leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .leg-name{font-size:12px;color:var(--tx2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -171,6 +171,12 @@ input,textarea,select{font-family:var(--fn);outline:none}
 .empty-tx{font-size:15px;color:var(--tx2);margin-bottom:6px}
 .empty-sb{font-size:13px}
 
+/* CHART */
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;text-align:center}
+.stat-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.stat-val{font-size:15px;font-weight:700;font-family:var(--mo)}
+.stat-chg{font-size:11px;margin-top:2px}
+
 /* DIVIDER */
 .div{height:1px;background:var(--border);margin:0 16px}
 
@@ -222,7 +228,7 @@ input,textarea,select{font-family:var(--fn);outline:none}
   <!-- Pie Chart + Legend -->
   <div class="card" id="pie-section">
     <div class="pie-wrap">
-      <canvas id="pie-canvas" width="120" height="120"></canvas>
+      <canvas id="pie-canvas" width="220" height="220" style="display:block;margin:0 auto"></canvas>
       <div class="pie-legend" id="pie-legend"></div>
     </div>
   </div>
@@ -240,17 +246,96 @@ input,textarea,select{font-family:var(--fn);outline:none}
   <div id="asset-list-full"></div>
 </div>
 
+<!-- ══════════════ SCREEN: SNAPSHOT EDIT ══════════════ -->
+<div class="scr" id="scr-snap-edit">
+  <!-- Header -->
+  <div class="topbar" style="flex-wrap:wrap;gap:6px;padding-bottom:8px">
+    <button class="btn-ic" onclick="closeSnapEdit()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <div style="flex:1;min-width:0">
+      <input class="fi" id="se-label" placeholder="ชื่อ snapshot" style="padding:6px 10px;font-size:14px;font-weight:700">
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="saveSnapEdit()">💾 Save</button>
+  </div>
+
+  <!-- Meta row -->
+  <div style="display:flex;gap:8px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;display:flex;align-items:center;gap:6px">
+      <span style="font-size:11px;color:var(--tx3)">วันที่</span>
+      <input id="se-date" class="fi" style="background:none;border:none;padding:0;font-size:13px;width:90px;color:var(--tx)" placeholder="dd/mm/yyyy">
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;display:flex;align-items:center;gap:6px">
+      <span style="font-size:11px;color:var(--tx3)">USD/THB</span>
+      <input id="se-rate" class="fi" style="background:none;border:none;padding:0;font-size:13px;width:55px;text-align:right;color:var(--c1)" type="number" step="0.01" oninput="recalcSnapEdit()">
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div style="font-size:18px;font-weight:700;font-family:var(--mo)" id="se-total">฿0</div>
+      <div style="font-size:11px;color:var(--tx3)" id="se-count">0 assets</div>
+    </div>
+  </div>
+
+  <!-- Asset list -->
+  <div id="se-asset-groups" style="padding-bottom:80px"></div>
+
+  <!-- FAB add asset -->
+  <button class="fab" onclick="openAddSnapAsset()">+</button>
+</div>
+
+<!-- ══════════════ SCREEN: CHART ══════════════ -->
+<div class="scr" id="scr-chart">
+  <div class="topbar">
+    <h1>Portfolio History</h1>
+    <div class="cur-toggle" style="margin-left:auto">
+      <button class="cur-btn active" id="chart-cur-thb" onclick="setChartCur('THB')">฿</button>
+      <button class="cur-btn" id="chart-cur-usd" onclick="setChartCur('USD')">$</button>
+    </div>
+  </div>
+
+  <!-- Chart toggle: total vs by category -->
+  <div style="padding:0 16px 12px;display:flex;gap:8px">
+    <button class="ftab active" id="chart-mode-total" onclick="setChartMode('total',this)">📈 Net Worth</button>
+    <button class="ftab" id="chart-mode-cat" onclick="setChartMode('cat',this)">🗂 By Category</button>
+  </div>
+
+  <!-- Summary stats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 16px 12px" id="chart-stats"></div>
+
+  <!-- Chart canvas -->
+  <div class="card" style="padding:12px">
+    <canvas id="line-canvas" style="width:100%;height:220px"></canvas>
+    <div id="chart-empty" class="hidden" style="text-align:center;padding:32px;color:var(--tx3)">
+      <div style="font-size:32px;margin-bottom:8px">📊</div>
+      <div style="font-size:14px;color:var(--tx2)">ต้องมีอย่างน้อย 2 snapshots</div>
+      <div style="font-size:12px;margin-top:4px">ไปที่ Snapshots แล้วบันทึกเพิ่มครับ</div>
+    </div>
+    <!-- X-axis labels -->
+    <div id="chart-xlabels" style="display:flex;justify-content:space-between;padding:4px 0 0;margin-top:4px"></div>
+  </div>
+
+  <!-- Data points list -->
+  <div class="sec-hdr"><div class="sec-hdr-title">ข้อมูลแต่ละ Snapshot</div></div>
+  <div class="grp-block" style="margin:0 16px" id="chart-data-list"></div>
+</div>
+
 <!-- ══════════════ SCREEN: SNAPSHOTS ══════════════ -->
 <div class="scr" id="scr-snaps">
   <div class="topbar">
     <h1>Snapshots</h1>
-    <button class="btn-sm btn-primary" onclick="saveSnap()">บันทึก</button>
   </div>
   <div class="card">
     <div style="font-size:13px;color:var(--tx2);margin-bottom:10px">บันทึก snapshot เพื่อเปรียบเทียบ portfolio ย้อนหลัง</div>
     <div class="fg">
       <label class="fl">Label (ชื่อ snapshot)</label>
       <input class="fi" id="snap-label" placeholder="เช่น End of March 2026" type="text">
+    </div>
+    <div class="fg">
+      <label class="fl">วันที่ (optional — ปล่อยว่าง = วันนี้)</label>
+      <input class="fi" id="snap-date-override" placeholder="เช่น 1/3/2026" type="text">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveSnap()">💾 บันทึก Snapshot ตอนนี้</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="openCopyFromSnap()">📋 Copy จาก Snapshot เก่า</button>
     </div>
   </div>
   <div class="grp-block" id="snap-list" style="margin:0 16px">
@@ -305,6 +390,10 @@ input,textarea,select{font-family:var(--fn);outline:none}
   <button class="nb" id="nb-assets" onclick="navTo('assets',this)">
     <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     <span>Assets</span>
+  </button>
+  <button class="nb" id="nb-chart" onclick="navTo('chart',this)">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>Chart</span>
   </button>
   <button class="nb" id="nb-snaps" onclick="navTo('snaps',this)">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -419,6 +508,59 @@ input,textarea,select{font-family:var(--fn);outline:none}
   </div>
 </div>
 
+<!-- SHEET: COPY FROM SNAPSHOT -->
+<div class="sheet-bg hidden" id="copy-snap-sheet">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">📋 Copy จาก Snapshot</div>
+      <button class="btn-ic" onclick="closeSheet('copy-snap-sheet')" style="margin-left:8px">✕</button>
+    </div>
+    <div class="form-wrap">
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">
+        เลือก snapshot ที่จะ copy assets มา แล้วปรับวันที่และชื่อก่อนบันทึก
+      </div>
+
+      <!-- Select source snapshot -->
+      <div class="fg">
+        <label class="fl">เลือก Snapshot ต้นทาง</label>
+        <select class="fi" id="copy-source-select" onchange="onCopySourceChange()">
+          <option value="">-- เลือก snapshot --</option>
+        </select>
+      </div>
+
+      <!-- Source preview -->
+      <div id="copy-source-preview" class="hidden" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:6px">ข้อมูลใน snapshot นี้</div>
+        <div id="copy-preview-body"></div>
+      </div>
+
+      <!-- New snapshot settings -->
+      <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">ตั้งค่า Snapshot ใหม่</div>
+      <div class="fg">
+        <label class="fl">Label ใหม่</label>
+        <input class="fi" id="copy-new-label" placeholder="เช่น End of Feb 2026" type="text">
+      </div>
+      <div class="fg">
+        <label class="fl">วันที่ (แก้ได้)</label>
+        <input class="fi" id="copy-new-date" placeholder="เช่น 28/2/2026" type="text">
+      </div>
+      <div class="fg">
+        <label class="fl">USD/THB Rate (แก้ได้)</label>
+        <input class="fi" id="copy-new-rate" placeholder="เช่น 34.50" type="number" step="0.01">
+      </div>
+
+      <!-- Asset adjustments -->
+      <div id="copy-asset-adjustments" class="hidden">
+        <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px">ปรับมูลค่า Assets (optional)</div>
+        <div id="copy-assets-list"></div>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:8px" onclick="saveCopiedSnap()">💾 บันทึก Snapshot ที่ Copy</button>
+    </div>
+  </div>
+</div>
+
 <!-- SHEET: SNAPSHOT DETAIL -->
 <div class="sheet-bg hidden" id="snap-sheet">
   <div class="sheet">
@@ -448,13 +590,16 @@ let S = {
   settings: { fxKey: '', fxOverride: 0 }
 };
 let G = {
-  cur: 'THB',       // display currency
-  usdthb: 34.5,     // current FX rate
-  filter: 'all',    // active filter
-  editId: null,     // asset being edited
+  cur: 'THB',
+  usdthb: 34.5,
+  filter: 'all',
+  editId: null,
   priceMode: 'auto',
-  catColors: {},    // category → color index
+  catColors: {},
   colorIdx: 0,
+  snapEditId: null,       // snapshot being edited
+  snapEditAssets: [],     // temp clone of snapshot assets
+  snapEditAssetIdx: -1,   // asset idx within snapshot
 };
 
 // ══════════════════════════════════════════════════
@@ -593,9 +738,11 @@ function navTo(scr, btn) {
   document.getElementById('scr-' + scr).classList.add('active');
   btn.classList.add('active');
   document.getElementById('fab').classList.toggle('hidden', scr !== 'overview' && scr !== 'assets');
+  // hide/show chart nav highlight
   if (scr === 'overview') renderOverview();
   if (scr === 'assets') renderAssetList();
   if (scr === 'snaps') renderSnapList();
+  if (scr === 'chart') renderChart();
 }
 function setCur(c) {
   G.cur = c;
@@ -704,7 +851,7 @@ function renderPie(assets) {
   // Canvas
   const canvas = document.getElementById('pie-canvas');
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 120, 120);
+  ctx.clearRect(0, 0, 220, 220);
 
   if (!total) {
     document.getElementById('pie-legend').innerHTML = '<div style="color:var(--tx3);font-size:12px">ไม่มีข้อมูล</div>';
@@ -712,42 +859,59 @@ function renderPie(assets) {
   }
 
   let angle = -Math.PI / 2;
+  const cx = 110, cy = 110, R = 100, rHole = 52;
   const colors = entries.map((_, i) => CAT_COLORS[i % CAT_COLORS.length]);
 
   entries.forEach(([key, val], i) => {
     const slice = (val / total) * 2 * Math.PI;
     ctx.beginPath();
-    ctx.moveTo(60, 60);
-    ctx.arc(60, 60, 54, angle, angle + slice);
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, angle, angle + slice);
     ctx.closePath();
     ctx.fillStyle = colors[i];
     ctx.fill();
+    // % label on slice
+    const pct = val / total * 100;
+    if (pct > 4) {
+      const mid = angle + slice / 2;
+      const lx = cx + Math.cos(mid) * R * 0.68;
+      const ly = cy + Math.sin(mid) * R * 0.68;
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.font = 'bold 12px -apple-system';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pct.toFixed(1) + '%', lx, ly);
+    }
     angle += slice;
   });
 
   // Center hole
   ctx.beginPath();
-  ctx.arc(60, 60, 32, 0, 2 * Math.PI);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg2') || '#0e1012';
+  ctx.arc(cx, cy, rHole, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0e1012';
   ctx.fill();
 
   // Center text
   ctx.fillStyle = '#e8f0f5';
-  ctx.font = 'bold 11px -apple-system';
+  ctx.font = 'bold 15px -apple-system';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(G.cur === 'USD' ? '$' + fmtN(total/G.usdthb,0) : '฿' + fmtN(total/1000,0)+'K', 60, 60);
+  const mainTxt = G.cur === 'USD' ? '$' + fmtN(total/G.usdthb,0) : '฿' + fmtN(total/1000,1)+'M';
+  ctx.fillText(mainTxt, cx, cy - 8);
+  ctx.fillStyle = '#7a9ab0';
+  ctx.font = '11px -apple-system';
+  ctx.fillText(entries.length + ' groups', cx, cy + 10);
 
   // Legend
   const legendEl = document.getElementById('pie-legend');
-  legendEl.innerHTML = entries.slice(0, 6).map(([key, val], i) => `
-    <div class="leg-item">
+  legendEl.innerHTML = entries.slice(0, 8).map(([key, val], i) => `
+    <div class="leg-item" style="background:var(--bg3);border-radius:8px;padding:7px 10px;gap:7px">
       <div class="leg-dot" style="background:${colors[i]}"></div>
-      <div class="leg-name">${key}</div>
-      <div>
-        <div class="leg-val">${fmtCur(val)}</div>
-        <div class="leg-pct">${(val/total*100).toFixed(1)}%</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${key}</div>
+        <div style="font-size:12px;font-family:var(--mo);color:var(--tx2)">${fmtCur(val)}</div>
       </div>
+      <div style="font-size:13px;font-weight:700;color:${colors[i]}">${(val/total*100).toFixed(1)}%</div>
     </div>`).join('');
 }
 
@@ -1086,21 +1250,36 @@ function hideSuggestsOnOutsideClick(e) {
 // ══════════════════════════════════════════════════
 function saveSnap() {
   const label = document.getElementById('snap-label').value.trim() || new Date().toLocaleDateString('th-TH');
+  const dateOverride = document.getElementById('snap-date-override').value.trim();
   const totalTHB = S.assets.reduce((s, a) => s + getAssetValueTHB(a), 0);
+
+  // Parse custom date for ts if provided
+  let ts = Date.now();
+  let dateStr = new Date().toLocaleDateString('th-TH');
+  if (dateOverride) {
+    // Try parse dd/mm/yyyy
+    const parts = dateOverride.split('/');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[2]) - 543, parseInt(parts[1]) - 1, parseInt(parts[0]));
+      if (!isNaN(d.getTime())) { ts = d.getTime(); dateStr = dateOverride; }
+    } else { dateStr = dateOverride; }
+  }
+
   const snap = {
     id: `s_${Date.now()}`,
     label,
-    date: new Date().toLocaleDateString('th-TH'),
+    date: dateStr,
     totalTHB,
     totalUSD: totalTHB / G.usdthb,
     usdthb: G.usdthb,
     assets: JSON.parse(JSON.stringify(S.assets)),
     cryptoPrices: { ...cryptoPrices },
-    ts: Date.now(),
+    ts,
   };
   S.snapshots.push(snap);
   saveState();
   document.getElementById('snap-label').value = '';
+  document.getElementById('snap-date-override').value = '';
   toast(`✓ บันทึก snapshot: ${label}`);
   renderSnapList();
   renderOverview();
@@ -1143,6 +1322,276 @@ function deleteSnap(id) {
 }
 
 function openSnapDetail(id) {
+  openSnapEdit(id);
+}
+
+function openSnapEdit(id) {
+  const snap = S.snapshots.find(s => s.id === id);
+  if (!snap) return;
+
+  // Clone into temp state
+  G.snapEditId = id;
+  G.snapEditAssets = JSON.parse(JSON.stringify(snap.assets || []));
+
+  // Fill header
+  document.getElementById('se-label').value = snap.label || snap.date || '';
+  document.getElementById('se-date').value = snap.date || '';
+  document.getElementById('se-rate').value = snap.usdthb || G.usdthb;
+
+  // Show screen
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('active'));
+  document.getElementById('scr-snap-edit').classList.add('active');
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+  document.getElementById('fab').classList.add('hidden');
+
+  recalcSnapEdit();
+  renderSnapEditAssets();
+}
+
+function closeSnapEdit() {
+  G.snapEditId = null;
+  G.snapEditAssets = [];
+  // Return to snapshots screen
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('active'));
+  document.getElementById('scr-snaps').classList.add('active');
+  document.getElementById('nb-snaps').classList.add('active');
+  document.getElementById('fab').classList.remove('hidden');
+  renderSnapList();
+}
+
+function recalcSnapEdit() {
+  const rate = parseFloat(document.getElementById('se-rate').value) || G.usdthb;
+  let total = 0;
+  (G.snapEditAssets || []).forEach(a => {
+    const qty = parseFloat(a.qty) || 0;
+    let price = 0;
+    const mode = a.priceMode || 'manual';
+    if (mode === 'auto') price = parseFloat(a.fetchedPrice) || 0;
+    else if (mode === 'implied') price = parseFloat(a.impliedRate) || 0;
+    else price = parseFloat(a.manualRate) || 0;
+    total += qty * price * (a.priceCur === 'USD' ? rate : 1);
+  });
+  document.getElementById('se-total').textContent = fmtCur(total);
+  document.getElementById('se-count').textContent = (G.snapEditAssets || []).length + ' assets';
+}
+
+function renderSnapEditAssets() {
+  const assets = G.snapEditAssets || [];
+  const rate = parseFloat(document.getElementById('se-rate').value) || G.usdthb;
+  const el = document.getElementById('se-asset-groups');
+
+  if (!assets.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-tx">ยังไม่มี asset</div>
+      <div class="empty-sb">กด + เพื่อเพิ่ม</div>
+    </div>`;
+    return;
+  }
+
+  // Group by cat → sub → broker
+  const tree = {};
+  assets.forEach((a, idx) => {
+    const cat = a.cat || 'Other';
+    const sub = a.sub || 'General';
+    const broker = a.broker || 'Other';
+    if (!tree[cat]) tree[cat] = {};
+    if (!tree[cat][sub]) tree[cat][sub] = {};
+    if (!tree[cat][sub][broker]) tree[cat][sub][broker] = [];
+    tree[cat][sub][broker].push({ ...a, _idx: idx });
+  });
+
+  let totalAll = 0;
+  assets.forEach(a => {
+    const qty = parseFloat(a.qty) || 0;
+    let price = 0;
+    const mode = a.priceMode || 'manual';
+    if (mode === 'auto') price = parseFloat(a.fetchedPrice) || 0;
+    else if (mode === 'implied') price = parseFloat(a.impliedRate) || 0;
+    else price = parseFloat(a.manualRate) || 0;
+    totalAll += qty * price * (a.priceCur === 'USD' ? rate : 1);
+  });
+
+  let html = '';
+  Object.entries(tree).forEach(([cat, subs]) => {
+    const color = getCatColor(cat);
+    Object.entries(subs).forEach(([sub, brokers]) => {
+      html += `<div class="grp-block">
+        <div style="padding:8px 14px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color}"></div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx2);flex:1">${cat} › ${sub}</div>
+        </div>`;
+      Object.entries(brokers).forEach(([broker, items]) => {
+        html += `<div style="padding:5px 14px 3px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--c1)">🏦 ${broker}</div>
+        </div>`;
+        items.forEach(a => {
+          const idx = a._idx;
+          const qty = parseFloat(a.qty) || 0;
+          let price = 0;
+          const mode = a.priceMode || 'manual';
+          if (mode === 'auto') price = parseFloat(a.fetchedPrice) || 0;
+          else if (mode === 'implied') price = parseFloat(a.impliedRate) || 0;
+          else price = parseFloat(a.manualRate) || 0;
+          const val = qty * price * (a.priceCur === 'USD' ? rate : 1);
+          const pct = totalAll ? (val / totalAll * 100).toFixed(1) : '0';
+          html += `<div class="asset-row" data-idx="${idx}" onclick="openEditSnapAsset(${idx})">
+            <div class="a-dot" style="background:${color}"></div>
+            <div class="a-info">
+              <div class="a-nm">${a.nm}${getPriceTag(a)}</div>
+              <div class="a-sb">${qty ? fmtN(qty, qty<1?4:0)+' units' : ''}${price ? ' × '+(a.priceCur==='USD'?'$':'฿')+fmtN(price, price<1?6:2) : ''}${a.note?' · '+a.note:''}</div>
+            </div>
+            <div class="a-rt">
+              <div class="a-vl">${fmtCur(val)}</div>
+              <div class="a-pc">${pct}%</div>
+            </div>
+          </div>`;
+        });
+      });
+      html += `</div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function openEditSnapAsset(idx) {
+  const a = G.snapEditAssets[idx];
+  if (!a) return;
+  G.editId = null; // not editing live asset
+  G.snapEditAssetIdx = idx;
+
+  document.getElementById('asset-sheet-title').textContent = 'แก้ไข Asset (Snapshot)';
+  document.getElementById('del-asset-btn').style.display = 'block';
+  document.getElementById('del-asset-btn').onclick = () => deleteSnapAsset(idx);
+  document.getElementById('save-asset-btn').textContent = '✓ อัปเดต Asset';
+  document.getElementById('save-asset-btn').onclick = () => saveSnapAsset(idx);
+
+  document.getElementById('f-cat').value = a.cat || '';
+  document.getElementById('f-sub').value = a.sub || '';
+  document.getElementById('f-broker').value = a.broker || '';
+  document.getElementById('f-name').value = a.nm || '';
+  document.getElementById('f-ticker').value = a.ticker || '';
+  document.getElementById('f-cur').value = a.priceCur || 'USD';
+  document.getElementById('f-qty').value = a.qty || '';
+  document.getElementById('f-note').value = a.note || '';
+
+  const mode = a.priceMode || 'auto';
+  setPriceMode(mode);
+  if (mode === 'auto') document.getElementById('f-fetched').value = a.fetchedPrice || '';
+  if (mode === 'implied') { document.getElementById('f-total-val').value = a.totalVal || ''; recalcImplied(); }
+  if (mode === 'manual') document.getElementById('f-manual-rate').value = a.manualRate || '';
+
+  document.getElementById('asset-sheet').classList.remove('hidden');
+}
+
+function openAddSnapAsset() {
+  G.editId = null;
+  G.snapEditAssetIdx = -1;
+  G.priceMode = 'auto';
+  document.getElementById('asset-sheet-title').textContent = 'เพิ่ม Asset (Snapshot)';
+  document.getElementById('del-asset-btn').style.display = 'none';
+  document.getElementById('save-asset-btn').textContent = '✓ เพิ่ม Asset';
+  document.getElementById('save-asset-btn').onclick = () => saveSnapAsset(-1);
+  clearForm();
+  setPriceMode('auto');
+  document.getElementById('asset-sheet').classList.remove('hidden');
+}
+
+function saveSnapAsset(idx) {
+  const cat = document.getElementById('f-cat').value.trim();
+  const sub = document.getElementById('f-sub').value.trim();
+  const broker = document.getElementById('f-broker').value.trim();
+  const nm = document.getElementById('f-name').value.trim();
+  if (!cat || !sub || !broker || !nm) { toast('กรุณาใส่ข้อมูลให้ครบ', true); return; }
+
+  const mode = G.priceMode;
+  const obj = {
+    id: idx >= 0 ? (G.snapEditAssets[idx].id || `a_${Date.now()}`) : `a_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    cat, sub, broker, nm,
+    ticker: document.getElementById('f-ticker').value.trim(),
+    priceCur: document.getElementById('f-cur').value,
+    qty: parseFloat(document.getElementById('f-qty').value) || 0,
+    note: document.getElementById('f-note').value.trim(),
+    priceMode: mode,
+    fetchedPrice: mode === 'auto' ? (parseFloat(document.getElementById('f-fetched').value) || 0) : 0,
+    fetchedAt: mode === 'auto' ? Date.now() : 0,
+    totalVal: mode === 'implied' ? (parseFloat(document.getElementById('f-total-val').value) || 0) : 0,
+    impliedRate: mode === 'implied' ? (() => {
+      const q = parseFloat(document.getElementById('f-qty').value) || 1;
+      const v = parseFloat(document.getElementById('f-total-val').value) || 0;
+      return v / q;
+    })() : 0,
+    manualRate: mode === 'manual' ? (parseFloat(document.getElementById('f-manual-rate').value) || 0) : 0,
+  };
+
+  if (idx >= 0) G.snapEditAssets[idx] = obj;
+  else G.snapEditAssets.push(obj);
+
+  closeSheet('asset-sheet');
+  // Restore save-asset-btn onclick to default
+  document.getElementById('save-asset-btn').onclick = saveAsset;
+  recalcSnapEdit();
+  renderSnapEditAssets();
+  toast(idx >= 0 ? '✓ อัปเดตแล้ว' : '✓ เพิ่ม asset แล้ว');
+}
+
+function deleteSnapAsset(idx) {
+  if (!confirm('ลบ asset นี้ออกจาก snapshot?')) return;
+  G.snapEditAssets.splice(idx, 1);
+  closeSheet('asset-sheet');
+  document.getElementById('save-asset-btn').onclick = saveAsset;
+  recalcSnapEdit();
+  renderSnapEditAssets();
+  toast('ลบแล้ว');
+}
+
+function saveSnapEdit() {
+  const id = G.snapEditId;
+  if (!id) return;
+  const snap = S.snapshots.find(s => s.id === id);
+  if (!snap) return;
+
+  const label = document.getElementById('se-label').value.trim() || snap.label;
+  const dateStr = document.getElementById('se-date').value.trim() || snap.date;
+  const rate = parseFloat(document.getElementById('se-rate').value) || snap.usdthb || G.usdthb;
+
+  // Parse ts from date
+  let ts = snap.ts || Date.now();
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const yr = parseInt(parts[2]);
+    const d = new Date(yr > 2500 ? yr - 543 : yr, parseInt(parts[1]) - 1, parseInt(parts[0]));
+    if (!isNaN(d.getTime())) ts = d.getTime();
+  }
+
+  // Recalc total
+  let totalTHB = 0;
+  G.snapEditAssets.forEach(a => {
+    const qty = parseFloat(a.qty) || 0;
+    let price = 0;
+    const mode = a.priceMode || 'manual';
+    if (mode === 'auto') price = parseFloat(a.fetchedPrice) || 0;
+    else if (mode === 'implied') price = parseFloat(a.impliedRate) || 0;
+    else price = parseFloat(a.manualRate) || 0;
+    totalTHB += qty * price * (a.priceCur === 'USD' ? rate : 1);
+  });
+
+  // Update snapshot in place
+  const idx = S.snapshots.findIndex(s => s.id === id);
+  S.snapshots[idx] = {
+    ...snap,
+    label, date: dateStr, ts,
+    usdthb: rate,
+    totalTHB,
+    totalUSD: totalTHB / rate,
+    assets: JSON.parse(JSON.stringify(G.snapEditAssets)),
+  };
+
+  saveState();
+  toast(`✓ บันทึก snapshot: ${label}`);
+  closeSnapEdit();
+}
+
+function openSnapDetail_OLD(id) {
   const snap = S.snapshots.find(s => s.id === id);
   if (!snap) return;
   const currentTHB = S.assets.reduce((sum, a) => sum + getAssetValueTHB(a), 0);
@@ -1231,6 +1680,388 @@ function saveFxOverride() {
 }
 
 // ══════════════════════════════════════════════════
+// CHART (Phase 2)
+// ══════════════════════════════════════════════════
+let G_chart = { cur: 'THB', mode: 'total' };
+
+function setChartCur(cur) {
+  G_chart.cur = cur;
+  document.getElementById('chart-cur-thb').classList.toggle('active', cur === 'THB');
+  document.getElementById('chart-cur-usd').classList.toggle('active', cur === 'USD');
+  renderChart();
+}
+
+function setChartMode(mode, btn) {
+  G_chart.mode = mode;
+  document.querySelectorAll('#scr-chart .ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function renderChart() {
+  const snaps = [...S.snapshots].sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const canvas = document.getElementById('line-canvas');
+  const emptyEl = document.getElementById('chart-empty');
+  const xlabels = document.getElementById('chart-xlabels');
+
+  if (snaps.length < 2) {
+    canvas.classList.add('hidden');
+    xlabels.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
+    renderChartStats([]);
+    renderChartList([]);
+    return;
+  }
+  canvas.classList.remove('hidden');
+  xlabels.classList.remove('hidden');
+  emptyEl.classList.add('hidden');
+
+  const toDisp = (thb) => G_chart.cur === 'USD' ? thb / G.usdthb : thb;
+  const fmt = (v) => G_chart.cur === 'USD' ? '$' + fmtN(v, 0) : '฿' + fmtN(v, 0);
+
+  if (G_chart.mode === 'total') {
+    drawLineChart(canvas, [{
+      label: 'Net Worth',
+      color: '#00e5cc',
+      points: snaps.map(s => ({ x: s.label || s.date, y: toDisp(s.totalTHB || 0) }))
+    }]);
+  } else {
+    // By category — collect all cats across all snaps
+    const allCats = [...new Set(snaps.flatMap(s => (s.assets || []).map(a => a.cat).filter(Boolean)))];
+    const series = allCats.map((cat, i) => ({
+      label: cat,
+      color: CAT_COLORS[i % CAT_COLORS.length],
+      points: snaps.map(s => {
+        const catAssets = (s.assets || []).filter(a => a.cat === cat);
+        // Recalculate cat value at snapshot time
+        let total = 0;
+        catAssets.forEach(a => {
+          const qty = parseFloat(a.qty) || 0;
+          let price = 0;
+          const mode = a.priceMode || 'manual';
+          if (mode === 'auto') price = parseFloat(s.cryptoPrices?.[a.ticker?.toUpperCase()] || a.fetchedPrice) || 0;
+          else if (mode === 'implied') price = parseFloat(a.impliedRate) || 0;
+          else price = parseFloat(a.manualRate) || 0;
+          const val = qty * price * (a.priceCur === 'USD' ? (s.usdthb || G.usdthb) : 1);
+          total += val;
+        });
+        return { x: s.label || s.date, y: toDisp(total) };
+      })
+    }));
+    drawLineChart(canvas, series);
+  }
+
+  // X-axis labels (show only first + last + middle if many)
+  const labels = snaps.map(s => s.label || s.date);
+  const showIdx = labels.length <= 4 ? labels.map((_, i) => i) :
+    [0, Math.floor(labels.length/2), labels.length - 1];
+  xlabels.innerHTML = labels.map((l, i) =>
+    showIdx.includes(i) ? `<span style="font-size:10px;color:var(--tx3)">${l.slice(0,8)}</span>` : '<span></span>'
+  ).join('');
+
+  renderChartStats(snaps);
+  renderChartList(snaps);
+}
+
+function drawLineChart(canvas, series) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || 320;
+  const H = 220;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 16, right: 16, bottom: 24, left: 52 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  if (!series.length || !series[0].points.length) return;
+
+  const nPoints = series[0].points.length;
+  const allVals = series.flatMap(s => s.points.map(p => p.y));
+  const minV = Math.min(...allVals);
+  const maxV = Math.max(...allVals);
+  const range = maxV - minV || 1;
+  const padV = range * 0.1;
+  const yMin = Math.max(0, minV - padV);
+  const yMax = maxV + padV;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (cH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    // Y label
+    const val = yMax - (yMax - yMin) * (i / 4);
+    ctx.fillStyle = '#3d5566';
+    ctx.font = '9px -apple-system';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    const lbl = val >= 1e6 ? (val/1e6).toFixed(1)+'M' : val >= 1e3 ? (val/1e3).toFixed(0)+'K' : val.toFixed(0);
+    ctx.fillText(lbl, pad.left - 4, y);
+  }
+
+  const xPos = (i) => pad.left + (i / (nPoints - 1)) * cW;
+  const yPos = (v) => pad.top + cH - ((v - yMin) / (yMax - yMin)) * cH;
+
+  series.forEach(serie => {
+    const pts = serie.points;
+    // Fill gradient
+    const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+    grad.addColorStop(0, serie.color + '30');
+    grad.addColorStop(1, serie.color + '00');
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(pts[0].y));
+    pts.forEach((p, i) => { if (i > 0) ctx.lineTo(xPos(i), yPos(p.y)); });
+    ctx.lineTo(xPos(pts.length - 1), H - pad.bottom);
+    ctx.lineTo(xPos(0), H - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle = serie.color;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    pts.forEach((p, i) => { i === 0 ? ctx.moveTo(xPos(i), yPos(p.y)) : ctx.lineTo(xPos(i), yPos(p.y)); });
+    ctx.stroke();
+
+    // Dots
+    pts.forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(xPos(i), yPos(p.y), 4, 0, 2 * Math.PI);
+      ctx.fillStyle = serie.color;
+      ctx.fill();
+      ctx.strokeStyle = '#0e1012';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+  });
+
+  // Legend for multi-series
+  if (series.length > 1) {
+    let lx = pad.left;
+    series.forEach(s => {
+      ctx.beginPath();
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 2;
+      ctx.moveTo(lx, 10); ctx.lineTo(lx + 14, 10);
+      ctx.stroke();
+      ctx.fillStyle = s.color;
+      ctx.font = 'bold 9px -apple-system';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s.label, lx + 17, 10);
+      lx += ctx.measureText(s.label).width + 36;
+    });
+  }
+}
+
+function openCopyFromSnap() {
+  if (!S.snapshots.length) { toast('ยังไม่มี snapshot', true); return; }
+  // Populate select
+  const sel = document.getElementById('copy-source-select');
+  const sorted = [...S.snapshots].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  sel.innerHTML = '<option value="">-- เลือก snapshot --</option>' +
+    sorted.map(s => `<option value="${s.id}">${s.label || s.date} — ฿${fmtN(s.totalTHB, 0)} (${s.date})</option>`).join('');
+  document.getElementById('copy-source-preview').classList.add('hidden');
+  document.getElementById('copy-asset-adjustments').classList.add('hidden');
+  document.getElementById('copy-new-label').value = '';
+  document.getElementById('copy-new-date').value = '';
+  document.getElementById('copy-new-rate').value = G.usdthb.toFixed(2);
+  document.getElementById('copy-snap-sheet').classList.remove('hidden');
+}
+
+function onCopySourceChange() {
+  const id = document.getElementById('copy-source-select').value;
+  if (!id) {
+    document.getElementById('copy-source-preview').classList.add('hidden');
+    document.getElementById('copy-asset-adjustments').classList.add('hidden');
+    return;
+  }
+  const snap = S.snapshots.find(s => s.id === id);
+  if (!snap) return;
+
+  // Preview
+  const preview = document.getElementById('copy-preview-body');
+  preview.innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:13px;color:var(--tx2)">Net Worth</span>
+      <span style="font-size:13px;font-weight:700;font-family:var(--mo)">฿${fmtN(snap.totalTHB, 0)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--tx3)">Assets</span>
+      <span style="font-size:12px;color:var(--tx2)">${(snap.assets||[]).length} รายการ</span>
+    </div>
+    <div style="display:flex;justify-content:space-between">
+      <span style="font-size:12px;color:var(--tx3)">USD/THB</span>
+      <span style="font-size:12px;color:var(--tx2)">฿${fmtN(snap.usdthb, 2)}</span>
+    </div>`;
+  document.getElementById('copy-source-preview').classList.remove('hidden');
+
+  // Auto-fill label suggestion
+  if (!document.getElementById('copy-new-label').value) {
+    document.getElementById('copy-new-label').value = (snap.label || snap.date) + ' (copy)';
+  }
+
+  // Build asset adjustment fields
+  const assets = snap.assets || [];
+  const listEl = document.getElementById('copy-assets-list');
+  listEl.innerHTML = assets.map((a, i) => {
+    const currentPrice = a.priceMode === 'auto' ? (parseFloat(snap.cryptoPrices?.[a.ticker?.toUpperCase()] || a.fetchedPrice) || 0)
+      : a.priceMode === 'implied' ? (parseFloat(a.impliedRate) || 0)
+      : (parseFloat(a.manualRate) || 0);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--tx)">${a.nm}</div>
+        <div style="font-size:11px;color:var(--tx3)">${a.cat} › ${a.sub} › ${a.broker}</div>
+        <div style="font-size:11px;color:var(--tx3)">qty: ${fmtN(a.qty, 4)} × ${a.priceCur==='USD'?'$':'฿'}${fmtN(currentPrice, currentPrice<1?6:2)}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--tx3);margin-bottom:3px">ราคาใหม่</div>
+        <input class="fi" data-idx="${i}" id="copy-price-${i}" type="number" step="any"
+          placeholder="${currentPrice||'เดิม'}"
+          style="width:100px;padding:6px 8px;font-size:13px;text-align:right">
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('copy-asset-adjustments').classList.remove('hidden');
+}
+
+function saveCopiedSnap() {
+  const id = document.getElementById('copy-source-select').value;
+  if (!id) { toast('กรุณาเลือก snapshot ก่อน', true); return; }
+  const snap = S.snapshots.find(s => s.id === id);
+  if (!snap) return;
+
+  const label = document.getElementById('copy-new-label').value.trim() || (snap.label + ' copy');
+  const dateStr = document.getElementById('copy-new-date').value.trim() || snap.date;
+  const newRate = parseFloat(document.getElementById('copy-new-rate').value) || snap.usdthb || G.usdthb;
+
+  // Parse ts from date
+  let ts = snap.ts || Date.now();
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const yr = parseInt(parts[2]);
+    const d = new Date(yr > 2500 ? yr - 543 : yr, parseInt(parts[1]) - 1, parseInt(parts[0]));
+    if (!isNaN(d.getTime())) ts = d.getTime();
+  }
+
+  // Copy assets and apply price overrides
+  const newAssets = JSON.parse(JSON.stringify(snap.assets || []));
+  newAssets.forEach((a, i) => {
+    const inp = document.getElementById('copy-price-' + i);
+    if (inp && inp.value.trim()) {
+      const newPrice = parseFloat(inp.value);
+      if (!isNaN(newPrice) && newPrice > 0) {
+        // Apply new price based on mode
+        if (a.priceMode === 'auto') { a.fetchedPrice = newPrice; }
+        else if (a.priceMode === 'implied') {
+          const qty = parseFloat(a.qty) || 1;
+          a.impliedRate = newPrice;
+          a.totalVal = newPrice * qty;
+        }
+        else { a.manualRate = newPrice; }
+      }
+    }
+  });
+
+  // Recalc total with new prices and rate
+  let totalTHB = 0;
+  newAssets.forEach(a => {
+    const qty = parseFloat(a.qty) || 0;
+    let price = 0;
+    if (a.priceMode === 'auto') price = parseFloat(a.fetchedPrice) || 0;
+    else if (a.priceMode === 'implied') price = parseFloat(a.impliedRate) || 0;
+    else price = parseFloat(a.manualRate) || 0;
+    const val = qty * price * (a.priceCur === 'USD' ? newRate : 1);
+    totalTHB += val;
+  });
+
+  const newSnap = {
+    id: `s_${Date.now()}`,
+    label, date: dateStr,
+    totalTHB,
+    totalUSD: totalTHB / newRate,
+    usdthb: newRate,
+    assets: newAssets,
+    cryptoPrices: { ...snap.cryptoPrices },
+    ts,
+    copiedFrom: snap.id,
+  };
+
+  S.snapshots.push(newSnap);
+  saveState();
+  closeSheet('copy-snap-sheet');
+  toast(`✓ บันทึก snapshot: ${label}`);
+  renderSnapList();
+  renderOverview();
+}
+
+function renderChartStats(snaps) {
+  const el = document.getElementById('chart-stats');
+  if (!snaps.length) { el.innerHTML = ''; return; }
+
+  const toDisp = (thb) => G_chart.cur === 'USD' ? thb / G.usdthb : thb;
+  const fmt = (v) => G_chart.cur === 'USD' ? '$' + fmtN(v, 0) : '฿' + fmtN(v, 0);
+
+  const first = snaps[0];
+  const last = snaps[snaps.length - 1];
+  const current = S.assets.reduce((s, a) => s + getAssetValueTHB(a), 0);
+  const totalGain = current - (first.totalTHB || 0);
+  const totalPct = first.totalTHB ? (totalGain / first.totalTHB * 100) : 0;
+  const bestSnap = snaps.reduce((best, s) => (s.totalTHB || 0) > (best.totalTHB || 0) ? s : best, snaps[0]);
+
+  el.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-lbl">First Snap</div>
+      <div class="stat-val">${fmt(toDisp(first.totalTHB || 0))}</div>
+      <div class="stat-chg" style="color:var(--tx3)">${first.label || first.date}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Total Gain</div>
+      <div class="stat-val" style="color:${totalGain >= 0 ? 'var(--c5)' : 'var(--c4)'}">${totalGain >= 0 ? '+' : ''}${fmt(toDisp(totalGain))}</div>
+      <div class="stat-chg" style="color:${totalGain >= 0 ? 'var(--c5)' : 'var(--c4)'}">${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Peak</div>
+      <div class="stat-val" style="color:var(--c2)">${fmt(toDisp(bestSnap.totalTHB || 0))}</div>
+      <div class="stat-chg" style="color:var(--tx3)">${bestSnap.label || bestSnap.date}</div>
+    </div>
+  `;
+}
+
+function renderChartList(snaps) {
+  const el = document.getElementById('chart-data-list');
+  if (!snaps.length) { el.innerHTML = '<div class="empty"><div class="empty-tx">ยังไม่มีข้อมูล</div></div>'; return; }
+  const toDisp = (thb) => G_chart.cur === 'USD' ? thb / G.usdthb : thb;
+  const fmt = (v) => G_chart.cur === 'USD' ? '$' + fmtN(v, 0) : '฿' + fmtN(v, 0);
+  const sorted = [...snaps].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  el.innerHTML = sorted.map((s, i) => {
+    const prev = sorted[i + 1];
+    const diff = prev ? (s.totalTHB || 0) - (prev.totalTHB || 0) : null;
+    const pct = prev && prev.totalTHB ? (diff / prev.totalTHB * 100) : null;
+    return `<div class="snap-row" onclick="openSnapDetail('${s.id}')">
+      <div style="flex:1">
+        <div class="snap-date">${s.label || s.date}</div>
+        <div class="snap-lbl">${s.date} · ${(s.assets||[]).length} assets · ฿${fmtN(s.usdthb,2)}/USD</div>
+      </div>
+      <div>
+        <div class="snap-val">${fmt(toDisp(s.totalTHB || 0))}</div>
+        ${pct !== null ? `<div class="snap-chg" style="color:${diff>=0?'var(--c5)':'var(--c4)'}">${diff>=0?'+':''}${pct.toFixed(2)}% vs prev</div>` : '<div class="snap-chg" style="color:var(--tx3)">first snapshot</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
 // EXPORT / IMPORT
 // ══════════════════════════════════════════════════
 function exportData() {
@@ -1295,6 +2126,11 @@ function renderAll() {
 
 function closeSheet(id) {
   document.getElementById(id).classList.add('hidden');
+  // Restore default onclick if closing asset sheet
+  if (id === 'asset-sheet') {
+    document.getElementById('save-asset-btn').onclick = saveAsset;
+    document.getElementById('del-asset-btn').onclick = deleteAsset;
+  }
 }
 
 function toast(msg, isErr = false) {
